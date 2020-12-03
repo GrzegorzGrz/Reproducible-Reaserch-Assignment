@@ -1,0 +1,106 @@
+---
+title: "Assignment"
+author: "Gr"
+date: "12/3/2020"
+output: html_document
+---
+
+##Reading and cleaning initial data
+```{r, results = "hide"}
+library(lubridate)
+unzip(zipfile = "repdata_data_activity.zip")
+db <- read.csv("activity.csv", header = TRUE, na.strings = "NA")
+db$date <- ymd(db$date)
+```
+
+#==================Strategy without fixing NA value===============
+
+## What is a total number of steps during a day avarage across all days for each interval
+
+```{R}
+
+total_steps_day <- aggregate(steps ~ date, data=db, sum)
+hist(total_steps_day$steps, breaks = 10, xlab = "number of steps per day", main= NULL)
+```
+## Mean and median 
+
+```{R}
+mean1 <- mean(total_steps_day$steps)
+median1 <- median(total_steps_day$steps)
+```
+Average number of steps per day is `r mean1` and median is `r median1`.
+
+
+## What is a typical pattern for number os steps for an avarage day and which interval has higest avarege number of steps
+
+```{R}
+av_steps_interval <- aggregate(steps ~ interval, data=db, mean)
+plot(av_steps_interval)
+
+#define highest number of steps
+mx <- max(av_steps_interval$steps)
+#select which interval is highest
+mx_interval <- av_steps_interval[av_steps_interval$steps == mx, 1]
+#adding marker to the plot
+abline(v = mx_interval, col = "red")
+abline(h = mx, col = "red")
+
+```
+
+#ggplot alternatives not used in this analysis 
+#library(ggplot2)
+#ggplot(av_steps_interval, aes(interval, steps)) + geom_point(alpha = 1/2)
+#qplot(interval, steps, data=av_steps_interval, xlab="interval", ylab="steps")
+
+
+#==================Strategy with fixing NA value===============
+##finding where we have NA value
+```{r}
+na_in_steps <- sum(is.na(db$steps))
+na_in_interval <- sum(is.na(db$interval))
+na_in_date <- sum(is.na(db$date))
+```
+
+##replacing NA with av value for a given interval
+```{R}
+db_no_na <- db
+
+for (i in c(1:length(db_no_na$steps))) {
+    if (is.na(db_no_na[i,1]) == TRUE) {
+      db_no_na[i,1] <- av_steps_interval[i,2]
+      } 
+}
+```
+
+
+## What is total number of steps taken per av day?
+```{R}
+total_steps_day_NA_fixed <- aggregate(steps ~ date, data=db_no_na, sum)
+par(mfrow = c(1,2))
+hist(total_steps_day_NA_fixed$steps, breaks = 10, xlab = "number of steps per day, NA fixed", main= NULL)
+hist(total_steps_day$steps, breaks = 10, xlab = "number of steps per day", main= NULL)
+
+#Mean and median number of steps taken each day
+
+mean2 <- mean(total_steps_day_NA_fixed$steps)
+median2 <- median(total_steps_day_NA_fixed$steps)
+```
+Average number of steps per day is `r mean2` and median is `r median2`.
+
+
+## Analyzing pattern across weekdays/weekends
+
+```{R}
+#Adding week day to the data and calculating average pattern across Weekday and Weekdays
+weekday <- weekdays(db_no_na$date)
+db_no_na_w<- cbind(db_no_na, weekday)
+av_steps_interval_na_fixed_weekend <- aggregate(steps ~ interval, data=subset(db_no_na_w, db_no_na_w$weekday == "Saturday" | db_no_na_w$weekday == "Sunday" ), mean)
+av_steps_interval_na_fixed_week_day <- aggregate(steps ~ interval, data=subset(db_no_na_w, db_no_na_w$weekday != "Saturday" | db_no_na_w$weekday != "Sunday" ), mean)
+
+#ploting results
+par(mfrow = c(1,2))
+plot(av_steps_interval_na_fixed_weekend, main = "Weekend")
+plot(av_steps_interval_na_fixed_week_day, main = "Week day")
+```
+
+There is visible difference in an activity pattern between typical Weekend and Week day. 
