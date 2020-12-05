@@ -1,0 +1,117 @@
+---
+title: "Storm data in USA 1950 - 2011 brief analysis"
+author: "Gr"
+date: "12/5/2020"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+## Helth and Economical impact
+
+## Abstract
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+This analysis involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.  
+  
+The purpose of this brief analysis is to understand which event type had highest effect on helth and economy of USA within data range 1950-2011  
+
+
+
+### Data Acquision
+Data were downloaded on 05.12.2020 from: <https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2>
+
+### Data loading and Processing
+```{R}
+library(lubridate)
+library(ggplot2)
+library(tidyr)
+db <- read.csv("repdata_data_StormData.csv.bz2")
+```
+
+There is a necessity to allign units across values, hence all economical values are recalulcated to milions.
+```{R}
+# for greatest economic consequences
+PROPDMG_M <- vector()
+for (i in c(1:length(db$BGN_DATE))) {
+      if (db$PROPDMGEXP[i] == "K") {PROPDMG_M[i] = db$PROPDMG[i] / 1000}
+  else PROPDMG_M[i] = db$PROPDMG[i]
+}
+CROPDMG_M <- vector()
+for (i in c(1:length(db$BGN_DATE))) {
+  if (db$CROPDMGEXP[i] == "K") {CROPDMG_M[i] = db$CROPDMG[i] / 1000}
+  else CROPDMG_M[i] = db$CROPDMG[i]
+}
+
+db_ECO <- cbind(db, PROPDMG_M, CROPDMG_M) 
+```
+
+## Impact on life and helth
+
+
+```{R}
+#FATALITIES - extracting top 20 Eventypes based on fatality 1950-2011
+total_FATALITIES <- aggregate(FATALITIES ~ EVTYPE, data=db, sum)
+total_FATALITIES <- total_FATALITIES[order(-total_FATALITIES$FATALITIES) , ]
+total_FATALITIES_top20 <- total_FATALITIES[1:20 ,]
+top1 <- total_FATALITIES_top20[1,1]
+top1V <- total_FATALITIES_top20[1,2]
+ggplot(total_FATALITIES_top20, aes(x = reorder(EVTYPE, -FATALITIES),  y = FATALITIES)) + geom_col() + theme(axis.text.x = element_text(angle = 90)) + labs(x = "Events", y="total number of fatalities")
+
+```
+  
+  From the plot we can clearly see that `r top1` is responsible for the most of deaths - `r top1V`.
+
+
+```{R}
+#INJURES - extracting top 20 Eventypes based on injury 1950-2011
+total_INJURIES <- aggregate(INJURIES ~ EVTYPE, data=db, sum)
+total_INJURIES <- total_INJURIES[order(-total_INJURIES$INJURIES) , ]
+total_INJURIES_top20 <- total_INJURIES[1:20 ,]
+top1 <- total_INJURIES_top20[1,1]
+top1V<- total_INJURIES_top20[1,2]
+ggplot(total_INJURIES_top20, aes(x = reorder(EVTYPE, -INJURIES),  y = INJURIES)) + geom_col() + theme(axis.text.x = element_text(angle = 90)) +labs(x = "Events", y="total number of injuries")
+
+
+```
+  
+  From the plot we can clearly see that `r top1` is responsible for the most of injuries - `r top1V`.
+
+## Impact on the economy
+
+```{R}
+#prop
+total_PROP <- aggregate(PROPDMG_M ~ EVTYPE, data=db_ECO, sum)
+total_PROP <- total_PROP[order(-total_PROP$PROPDMG_M) , ]
+total_PROP_top20 <- total_PROP[1:5 ,]
+top1 <- total_PROP_top20[1,1]
+```
+The most impactfull events on properties damage are: `r top1`  
+
+```{R}
+#crop
+total_CROP <- aggregate(CROPDMG_M ~ EVTYPE, data=db_ECO, sum)
+total_CROP <- total_CROP[order(-total_CROP$CROPDMG_M) , ]
+total_CROP_top20 <- total_CROP[1:5 ,]
+top1 <- total_CROP_top20[1,1]
+```
+The most impactfull events on crops damage are: `r top1`  
+
+```{R}
+#total
+total <- aggregate(CROPDMG_M+PROPDMG_M ~ EVTYPE, data=db_ECO, sum)
+total <- total[order(-total$`CROPDMG_M + PROPDMG_M`) , ]
+total_top20 <- total[1:20 ,]
+top1 <- total_top20[1,1]
+top1v <- total_top20[1,2]
+ggplot(total_top20, aes(x = reorder(EVTYPE, -`CROPDMG_M + PROPDMG_M`),  y = `CROPDMG_M + PROPDMG_M`)) + geom_col() + theme(axis.text.x = element_text(angle = 90)) +labs(x = "Events", y="total cost in M$")
+
+```
+From the plot we can clearly see that `r top1` is responsible for the highest economical costs - `r top1v` M$.
+
+
+
+
+
+ 
+
+
